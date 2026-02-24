@@ -21,14 +21,22 @@ RUN wget https://bao-products-builds.s3.us-east-1.amazonaws.com/analytics-platfo
 
 RUN chmod +x bao-data-pipeline.jar
 
-RUN addgroup --system --gid 1001 bao-admin
-RUN adduser --system --uid 1001 bao-admin
+# Create system user/group first
+RUN addgroup --system --gid 1001 bao-admin \
+ && adduser  --system --uid 1001 --ingroup bao-admin bao-admin
+
+# Create directories with correct permissions BEFORE switching user
+RUN mkdir -p /opt/bao-data-pipeline/logs \
+    && mkdir -p /opt/bao-data-pipeline/data-pipeline \
+    && chown -R 1001:1001 /opt/bao-data-pipeline /app \
+    && chmod -R 755 /opt/bao-data-pipeline
+
 
 USER bao-admin
 
 EXPOSE 8084
 
-ENV JAVA_OPTS="-Xms1024M -Xmx2048M"
+ENV JAVA_OPTS="-Xms1024M -Xmx2048M -Dlogging.file.path=/opt/bao-data-pipeline/logs"
 
 ENV CACHE_DIR="/opt/bao-data-pipeline/data-pipeline"
 
