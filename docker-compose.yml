@@ -223,6 +223,8 @@ services:
         condition: service_healthy
       bookie:
         condition: service_started
+      pulsar-init:
+        condition: service_completed_successfully
     volumes:
       - ./data/pulsar:/pulsar/data
     mem_limit: 6gb
