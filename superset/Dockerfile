@@ -1,6 +1,6 @@
 # change this to apache/superset:5.0.0 or whatever version you want to build from;
 # otherwise the default is the latest commit on GitHub master branch
-FROM apache/superset:latest
+FROM --platform=$BUILDPLATFORM apache/superset:latest
 
 USER root
 

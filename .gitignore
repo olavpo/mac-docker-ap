@@ -1,3 +1,6 @@
 bao-data-pipeline/config/bao-data-pipeline-key.json
 data/analytics-platform/
 !data/analytics-platform/bao-data-pipeline/bao-ap-client-main/placeholder.txt
+/data
+/analytics-platform
+/analytics-platform
