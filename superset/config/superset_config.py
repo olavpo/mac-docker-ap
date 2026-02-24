@@ -1,3 +1,7 @@
+from flask_appbuilder.security.manager import AUTH_DB
+
+AUTH_TYPE = AUTH_DB
+
 # Number of worker threads
 SUPERSET_WORKERS = 4
 
@@ -8,7 +12,7 @@ SUPERSET_WEBSERVER_PORT = 8089
 ENABLE_TIME_ROTATE = True
 
 # Encryption key
-SECRET_KEY = 'change-me'
+SECRET_KEY = 'obladioblada'
 
 # SuperSet PostgreSQL metadata database connection
 SQLALCHEMY_DATABASE_URI = 'postgresql://bao:analytics-platform@ap-db/superset'
@@ -37,7 +41,7 @@ MAPBOX_API_KEY = ''
 
 # Enable CORS to allow embedded dashboards
 ENABLE_CORS = True
-ALLOW_ORIGINS = ['https://analyticsplatform.services', 'https://hmis-apache-superset.xyz']
+ALLOW_ORIGINS = ['https://analyticsplatform.services', 'https://hmis-apache-superset.xyz', 'http://localhost']
 CORS_OPTIONS = {
     'supports_credentials': True,
     'allow_headers': ['*'],
