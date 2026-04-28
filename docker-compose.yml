@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:latest
+    image: redis:8-alpine
     mem_limit: 2gb
     volumes:
       - ./data/redis:/data
@@ -43,6 +43,8 @@ services:
 
   superset:
     image: superset-native
+    env_file:
+      - ./superset/.env
     environment:
       - SUPERSET_CONFIG_PATH=/app/pythonpath/superset_config.py
     volumes:
@@ -60,6 +62,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 120s
     restart: unless-stopped
     networks:
       default:
@@ -81,6 +84,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   identity:
@@ -95,6 +99,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+      bookie:
+        condition: service_started
       pulsar:
         condition: service_healthy
     healthcheck:
@@ -102,6 +110,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   data-pipeline:
@@ -117,6 +126,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+      bookie:
+        condition: service_started
       pulsar:
         condition: service_healthy
     healthcheck:
@@ -124,6 +137,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   dhis2-gateway:
@@ -141,12 +155,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   zookeeper:
     image: apachepulsar/pulsar:3.3.9
     container_name: zookeeper
-    restart: on-failure
+    restart: unless-stopped
     volumes:
       - ./data/pulsar/zookeeper:/pulsar/data/zookeeper
     environment:
@@ -188,7 +203,7 @@ services:
   bookie:
     image: apachepulsar/pulsar:3.3.9
     container_name: bookie
-    restart: on-failure
+    restart: unless-stopped
     platform: linux/arm64
     environment:
       - clusterName=cluster-a
@@ -210,7 +225,7 @@ services:
     container_name: pulsar
     hostname: pulsar
     platform: linux/arm64
-    restart: on-failure
+    restart: unless-stopped
     environment:
       - metadataStoreUrl=zk:zookeeper:2181
       - zookeeperServers=zookeeper:2181
@@ -239,7 +254,7 @@ services:
       start_period: 5s
 
   proxy:
-    image: nginx:latest
+    image: nginx:stable-alpine
     ports:
       - "80:80"
       - "443:443"

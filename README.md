@@ -21,77 +21,66 @@ This setup requires the latest version of docker (> 28.4.0) and docker compose (
 - DHIS2 Superset Gateway - API gateway for connecting DHIS2 to Superset
 - Proxy - Reverse proxy for the analytics platform
 
-## Migration from the old setup
+## Installation
 
-If you already cloned the old setup, you can migrate to the new setup by downloading the release file from the
-[releases page](https://github.com/Baosystems/bao-ap-docker/releases)
+To install the setup, either clone this repository or download the latest release from
+the [releases page](https://github.com/Baosystems/bao-ap-docker/releases).
+
+If downloading a release:
 
 ```shell
 wget https://github.com/hisptz/bao-ap-docker/releases/download/<latest-tag-here>/analytics-platform.zip
-```
-
-And then unzip the downloaded archive:
-
-```shell
-  unzip analytics-platform.zip
-```
-
-Then move or copy the `docker-compose.yml` and the `docker-compose.pulsar.yml` files to the root of the cloned
-repository in the old setup. The new `docker-compose.yml` should replace the old one.
-
-To clean up the setup, you can delete the downloaded analytics-platform.zip file and the unzipped folder. You can also
-delete the `Dockerfile` files in the `bao-data-pipeline`, `bao-identity`, `bao-api-gateway`, `dhis2-superset-gateway`
-folders. You can also delete the pulsar folder.
-
-## Installation
-
-To install the setup, download the latest release from
-the [releases page](https://github.com/Baosystems/bao-ap-docker/releases).
-
-You can use wget to download the release:
-
-```shell
- wget https://github.com/hisptz/bao-ap-docker/releases/download/<latest-tag-here>/analytics-platform.zip
-```
-
-And then unzip the downloaded archive:
-
-```shell
-  unzip analytics-platform.zip
-```
-
-An then navigate to the extracted folder:
-
-```shell
+unzip analytics-platform.zip
 cd analytics-platform
 ```
 
 ## Setup
 
-First, pull all required images by running:
+### Building custom service images
 
-```shell 
-docker compose pull 
+The analytics platform includes custom services (identity, data-pipeline, api-gateway, dhis2-superset-gateway) that are built from `Dockerfile`s in this repository. These Dockerfiles download pre-built JARs from an S3 repository.
+
+**Important:** Ensure you have network access to `bao-products-builds.s3.us-east-1.amazonaws.com` before building.
+
+To build all custom service images locally (ARM64 optimized):
+
+```shell
+bash build-native-arm64.sh
 ```
+
+For x86_64 builds, modify the Dockerfiles to remove `platform: linux/arm64` declarations.
+
+### Pulling and preparing volumes
+
+After building custom images, pull the remaining pre-built images:
+
+```shell
+docker compose pull
+```
+
+This downloads third-party services (Postgres, Redis, ClickHouse, Nginx, Pulsar).
 
 ### Setting up volume permissions
 
-Some services require the volume to be accessible by the user running inside the docker container.
+Some services require volumes to be accessible by the user running inside docker containers (UID 1001 or 10000).
 
-#### Data pipeline
-
-To configure the data pipeline service to be able to write to the volume, run the following command:
+**Important:** Run these commands before first startup. The directories will be created automatically on first run if they don't exist, but permissions must be set correctly.
 
 ```shell
- sudo chown -R 1001:1001 data/analytics-platform && sudo chmod -R 755 data/analytics-platform
-```
+# Data pipeline service (UID 1001)
+sudo chown -R 1001:1001 data/analytics-platform && sudo chmod -R 755 data/analytics-platform
 
-#### Pulsar
+# Pulsar services (UID 10000)
+sudo chown -R 10000:10000 data/pulsar && sudo chmod -R 755 data/pulsar
 
-To configure the pulsar service to be able to write to the volume, run the following command:
+# PostgreSQL database (UID 999)
+sudo chown -R 999:999 data/db && sudo chmod -R 700 data/db
 
-```shell
- sudo chown -R 10000:10000 data/pulsar && sudo chmod -R 755 data/pulsar
+# Redis (UID 999)
+sudo chown -R 999:999 data/redis && sudo chmod -R 755 data/redis
+
+# ClickHouse (UID 101)
+sudo chown -R 101:101 data/clickhouse && sudo chmod -R 755 data/clickhouse
 ```
 
 ## Configuration
@@ -106,16 +95,24 @@ the database connection string in the service configuration files for identity, 
 
 ### Data Pipeline (data-pipeline)
 
+**Encryption key setup (required):**
+
+The data pipeline service requires an encryption key file before first startup. Generate a new key following the [documentation](https://docs.ap.baosystems.com/sysadmin/analytics-platform-installation/#encryption) and place the resulting JSON key at:
+
+```
+bao-data-pipeline/config/bao-data-pipeline-key.json
+```
+
+This file is mounted into the container and must exist before starting the service.
+
+**Configuration:**
+
 The data pipeline service configuration can be found in the `bao-data-pipeline/config/bao-data-pipeline.conf` file. The
 default database connection should work as is unless you use a different database setup, or you change the database
 name, username, and password as explained in the database section.
 
 You can configure the rest of the data pipeline service as explained in
 the [data pipeline documentation](https://docs.ap.baosystems.com/sysadmin/analytics-platform-installation/#data-pipeline).
-
-The data pipeline services also requires an encryption key to be set. You can generate a new key as explained in
-the [documentation](https://docs.ap.baosystems.com/sysadmin/analytics-platform-installation/#encryption) and place the
-resulting JSON key in the `bao-data-pipeline/config/bao-data-pipeline-key.json` file.
 
 ### Identity (identity)
 
@@ -258,4 +255,21 @@ set it up using the following values:
 - Username: dhis2-db-user
 - Password: dhis2-db-password
 - Database name: dhis-db-name
+
+## Image vulnerability scanning
+
+To check for known vulnerabilities in the container images used by the
+platform, use Docker Scout's `quickview` command. Note that you must be
+logged in with a Docker ID or PAT for the scan to run:
+
+```shell
+# login if you haven't already
+docker login
+
+docker scout quickview
+```
+
+The output will list each image and any high/critical CVEs, along with
+recommended updates. Scanning periodically (e.g. as part of CI) helps
+catch outdated components and keep the platform secure.
 
