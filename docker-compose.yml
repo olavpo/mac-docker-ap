@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
 
   clickhouse:
-    image: clickhouse/clickhouse-server:latest
+    image: clickhouse/clickhouse-server:25.8
     mem_limit: 4gb
     env_file:
       - ./clickhouse/.env
